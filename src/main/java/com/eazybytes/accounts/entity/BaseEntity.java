@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @ToString
-@NamedQuery()
+
 public class BaseEntity {
     @Column(updatable = false)
     private LocalDateTime createdAt;
