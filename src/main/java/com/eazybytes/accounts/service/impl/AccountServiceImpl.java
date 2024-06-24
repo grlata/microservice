@@ -4,26 +4,47 @@ import com.eazybytes.accounts.constants.AccountsConstants;
 import com.eazybytes.accounts.dto.CustomerDto;
 import com.eazybytes.accounts.entity.Accounts;
 import com.eazybytes.accounts.entity.Customer;
+import com.eazybytes.accounts.exception.CustomerAlreadyExistException;
+import com.eazybytes.accounts.exception.ResourceNotFoundException;
 import com.eazybytes.accounts.mapper.CustomerMapper;
 import com.eazybytes.accounts.repository.AccountsRepository;
 import com.eazybytes.accounts.repository.CustomerRepository;
-import com.eazybytes.accounts.service.IAccountIsService;
+import com.eazybytes.accounts.service.IAccountsService;
 import lombok.AllArgsConstructor;
+import org.springframework.boot.context.config.ConfigDataResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
 @AllArgsConstructor
-public class AccountServiceImpl implements IAccountIsService {
+public class AccountServiceImpl implements IAccountsService {
 
     public AccountsRepository accountsRepository;
     public CustomerRepository customerRepository;
+
     @Override
     public void createAccount(CustomerDto customerDto) {
-        Customer customer =CustomerMapper.mapToCustomer(customerDto, new Customer());
-        Customer savedCustomer= customerRepository.save(customer);
+        Customer customer = CustomerMapper.mapToCustomer(customerDto, new Customer());
+        Optional<Customer> optionalCustomer = customerRepository.findByMobileNumber(customerDto.getMobileNumber());
+        if (optionalCustomer.isPresent()) {
+            throw new CustomerAlreadyExistException("Customer already exist with the mobile number" + customerDto.getMobileNumber());
+        }
+        customer.setCreatedAt(LocalDateTime.now());
+        customer.setCreatedBy("Anonymous");
+        Customer savedCustomer = customerRepository.save(customer);
         accountsRepository.save(createNewAccount(savedCustomer));
+    }
+
+    @Override
+    public CustomerDto fetchAccount(String mobileNumber) {
+        Customer customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
+               () -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber)
+       );
+        Accounts accounts = accountsRepository.findByCustomerId(customer.getCustomerId()).orElseThrow( ()-> new ResourceNotFoundException("Account","customerId",customer.getCustomerId().toString()));
+        return null;
     }
 
     /**
@@ -38,6 +59,11 @@ public class AccountServiceImpl implements IAccountIsService {
         newAccount.setAccountNumber(randomAccNumber);
         newAccount.setAccountType(AccountsConstants.SAVINGS);
         newAccount.setBranchAddress(AccountsConstants.ADDRESS);
+        newAccount.setCreatedAt(LocalDateTime.now());
+        newAccount.setCreatedBy("Latha");
+
         return newAccount;
     }
+
+
 }
